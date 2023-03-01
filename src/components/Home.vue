@@ -1,11 +1,10 @@
 <script setup>
 import { ref } from "vue";
 import { getAuth, signOut } from "firebase/auth";
-import { collection, addDoc, getDocs, doc, updateDoc, deleteDoc } from "firebase/firestore";
+import { collection, addDoc, getDocs, doc, updateDoc, deleteDoc, getDoc } from "firebase/firestore";
 import { db } from "../main.js"
 import { useRouter } from "vue-router";
 import { Icon } from '@iconify/vue';
-import { async } from "@firebase/util";
 const router = useRouter();
 
 const menu = ref({
@@ -16,8 +15,10 @@ const menu = ref({
 });
 const editText = ref([]);
 const allMenu = ref([]);
+const dialog = ref(false);
 
-async function addUserData() {
+//เพิ่มเมนู
+async function addData() {
     try {
         const docRef = await addDoc(collection(db, "foodmanu"), menu.value);
         console.log("Document written with ID: ", docRef.id);
@@ -25,7 +26,7 @@ async function addUserData() {
         console.error("Error adding document: ", e);
     }
 }
-
+//แสดงเมนูทั้งหมด
 async function showMenu() {
     const querySnapshot = await getDocs(collection(db, "foodmanu"));
     querySnapshot.forEach((doc) => {
@@ -36,33 +37,46 @@ async function showMenu() {
         allMenu.value.push(myDoc.value);
     });
 }
-
+//แก้ไขเมนู โดยแสดงข้อมูลของแถวที่เลือก
 function editMenu(menulist) {
-
     editText.value = menulist
-/*     menu.nameTh = menulist.data.nameTh
-    menu.nameEn = menulist.data.nameEn
-    menu.price = menulist.data.price
-    menu.detail = menulist.data.detail */
+    menu.value = menulist.data
 }
-
+//ยืนยันการแก้ไข
 async function updateMenu(id) {
 
-    try {
-        const washingtonRef = doc(db, "foodmanu", id);
-        // Set the "capital" field of the city 'DC'
-        await updateDoc(washingtonRef, menu.value);
-        console.log("update menu")
-        cancelUpdate()
-    } catch (e) {
-        console.error(e)
-    }
+    if (confirm("ยืนยันการแก้ไขเมนูนี้ ?")) {
+        try {
+            const washingtonRef = doc(db, "foodmanu", id);
+            // Set the "capital" field of the city 'DC'
+            await updateDoc(washingtonRef, menu.value);
+            console.log("update menu")
 
+        } catch (e) {
+            console.error(e)
+        }
+        readUpdateMenu(id)
+    }
 }
-function cancelUpdate(){
+//แสดงรายการเมนูที่แก้ไขแล้ว หลังจากกดยืนยัน
+async function readUpdateMenu(id) {
+    const docRef = doc(db, "foodmanu", id);
+    const docSnap = await getDoc(docRef);
+
+    if (docSnap.exists(id)) {
+        console.log(id , docSnap.data());
+        const newEdit = docSnap.data()
+        editText.value = newEdit
+    } else {
+        // doc.data() will be undefined in this case
+        console.log("No such document!");
+    }
+}
+//ยกเลิกแก้ไข
+function cancelUpdate() {
     editText.value = null;
 }
-
+//ลบเมนูแถวที่เลือก
 async function deleteMenu(id, index) {
     if (confirm("คุณต้องการลบเมนูนี้หรือไม่ ?")) {
         await deleteDoc(doc(db, "foodmanu", id));
@@ -82,6 +96,7 @@ function logout() {
         // An error happened.
     });
 }
+
 </script>
 
 <template>
@@ -92,31 +107,42 @@ function logout() {
                 <Icon icon="mdi:logout" width="20" height="20" />
             </v-btn>
         </div>
-        <div class="py-4">
-            <v-card class="mx-auto pa-12 pb-8" elevation="8" max-width="448" rounded="lg">
-                <v-form ref="form">
-                    <v-text-field label="ชื่อเมนูไทย" variant="underlined" v-model="menu.nameTh"></v-text-field>
-                    <v-text-field label="ชื่อเมนูอังกฤษ" variant="underlined" v-model="menu.nameEn"></v-text-field>
-                    <v-text-field label="ราคา" suffix="฿" variant="underlined" v-model="menu.price"></v-text-field>
-                    <v-textarea label="รายละเอียด" auto-grow variant="underlined" rows="1" row-height="15"
-                        v-model="menu.detail"></v-textarea>
-
-                    <v-card-text class="text-center">
-                        <v-btn color="green" variant="plain" @click="addUserData()">
-                            เพิ่มข้อมูล
-                        </v-btn>
-                    </v-card-text>
-                </v-form>
-            </v-card>
-        </div>
-
-        <div class="py-4">
-            <v-card class="mx-auto pa-12 pb-8" elevation="8" max-width="1300" rounded="lg">
+        <div class="Table">
+            <v-card class="mx-auto pa-12 pb-8" elevation="8" max-width="1200">
                 <v-card-text class="text-left">
-                    <v-btn color="blue" variant="plain" @click="showMenu()">
+                    <v-dialog v-model="dialog" persistent width="500">
+                        <template v-slot:activator="{ props }">
+                            <v-btn color="green" v-bind="props">
+                                เพิ่มเมนู
+                            </v-btn>
+                        </template>
+                        <v-card class="mx-auto pa-12 pb-8" elevation="8" max-width="900" rounded="lg">
+                            <v-form ref="form">
+                                <v-text-field label="ชื่อเมนูไทย" variant="underlined" v-model="menu.nameTh"></v-text-field>
+                                <v-text-field label="ชื่อเมนูอังกฤษ" variant="underlined"
+                                    v-model="menu.nameEn"></v-text-field>
+                                <v-text-field label="ราคา" suffix="฿" variant="underlined"
+                                    v-model="menu.price"></v-text-field>
+                                <v-textarea label="รายละเอียด" auto-grow variant="underlined" rows="1" row-height="15"
+                                    v-model="menu.detail"></v-textarea>
+
+                                <v-card-text class="text-center">
+                                    <v-btn class="btndialogsave" color="green" @click="addData(), dialog = false">
+                                        <Icon icon="line-md:confirm" color="white" width="30" height="30" />
+                                    </v-btn>
+                                    <v-btn class="btndialogcancel" color="red" @click="dialog = false">
+                                        <Icon icon="mdi:cancel-bold" color="white" width="30" height="30" />
+                                    </v-btn>
+                                </v-card-text>
+                            </v-form>
+                        </v-card>
+                    </v-dialog>
+
+                    <v-btn class="btnshowmenu" color="blue" variant="tonal" @click="showMenu()">
                         แสดงเมนู
                     </v-btn>
                 </v-card-text>
+
 
                 <v-progress-linear model-value="100" color="cyan" rounded></v-progress-linear>
 
@@ -127,48 +153,45 @@ function logout() {
                             <th>ชื่อเมนูอังกฤษ</th>
                             <th>ราคา</th>
                             <th>รายละเอียด</th>
-                            <th> </th>
-
+                            <th></th>
                         </tr>
                     </thead>
                     <tbody>
                         <tr v-for="(menulist, index) in allMenu" :key="index">
                             <td>
                                 <p v-if="menulist != editText">{{ menulist.data.nameTh }}</p>
-                                <input v-else type="text" v-model="menu.nameTh">
+                                <input size="10" v-else type="text" v-model="menu.nameTh">
                             </td>
                             <td>
                                 <p v-if="menulist != editText">{{ menulist.data.nameEn }}</p>
-                                <input v-else type="text" v-model="menu.nameEn">
+                                <input size="10" v-else type="text" v-model="menu.nameEn">
                             </td>
                             <td>
                                 <p v-if="menulist != editText">{{ menulist.data.price }}</p>
-                                <input v-else type="number" v-model="menu.price">
+                                <input size="5" v-else type="number" v-model="menu.price">
                             </td>
                             <td>
                                 <p v-if="menulist != editText">{{ menulist.data.detail }}</p>
-                                <input v-else type="text" v-model="menu.detail">
+                                <input size="15" v-else type="text" v-model="menu.detail">
                             </td>
                             <td>
-                                <div v-if="menulist != editText">
-                                    <v-btn variant="plain" @click="editMenu(menulist)">
+                                <div class="text-center" v-if="menulist != editText">
+                                    <v-btn class="btnedit" variant="plain" @click="editMenu(menulist)">
                                         <Icon icon="material-symbols:edit-square-outline" width="30" height="30" />
                                     </v-btn>
-                                    <v-btn variant="plain" @click="deleteMenu(menulist.id, index)">
+                                    <v-btn class="btndelete" variant="plain" @click="deleteMenu(menulist.id, index)">
                                         <Icon icon="ic:outline-delete-outline" color="red" width="30" height="30" />
                                     </v-btn>
                                 </div>
                                 <div v-else>
-                                    <v-btn color="green" @click="updateMenu(menulist.id)">
+                                    <v-btn class="btnconfirm" color="green" @click="updateMenu(menulist.id)">
                                         <Icon icon="line-md:confirm" color="white" width="30" height="30" />
                                     </v-btn>
-                                    <v-btn color="red" @click="cancelUpdate()">
+                                    <v-btn class="btncancel" color="red" @click="cancelUpdate()">
                                         <Icon icon="mdi:cancel-bold" color="white" width="30" height="30" />
                                     </v-btn>
                                 </div>
-
                             </td>
-
                         </tr>
                     </tbody>
                 </v-table>
@@ -186,7 +209,44 @@ function logout() {
      background-position: top center;
  }
 
- .btlogout {
+ .Table {
+     padding: 14rem;
+ }
+
+ .btndialogsave {
+     margin-left: 2rem;
+     margin-right: 1rem;
+ }
+
+ .btndialogcancel {
+     margin-left: 1rem;
      margin-right: 2rem;
  }
-</style>
+
+ .btnshowmenu {
+     margin-left: 1rem;
+ }
+
+ .btnedit {
+     margin-left: 1rem;
+     margin-right: 1rem;
+ }
+
+ .btndelete {
+     margin-left: 1rem;
+     margin-right: 1rem;
+ }
+
+ .btnconfirm {
+     margin-left: 1rem;
+     margin-right: 1rem;
+ }
+
+ .btncancel {
+     margin-left: 1rem;
+     margin-right: 1rem;
+ }
+
+ .btlogout {
+     margin-right: 2rem;
+ }</style>
