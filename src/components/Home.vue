@@ -64,7 +64,7 @@ async function readUpdateMenu(id) {
     const docSnap = await getDoc(docRef);
 
     if (docSnap.exists(id)) {
-        console.log(id , docSnap.data());
+        console.log(id, docSnap.data());
         const newEdit = docSnap.data()
         editText.value = newEdit
     } else {
@@ -74,7 +74,7 @@ async function readUpdateMenu(id) {
 }
 //ยกเลิกแก้ไข
 function cancelUpdate() {
-    editText.value = null;
+    editText.value = null
 }
 //ลบเมนูแถวที่เลือก
 async function deleteMenu(id, index) {
@@ -160,19 +160,20 @@ function logout() {
                         <tr v-for="(menulist, index) in allMenu" :key="index">
                             <td>
                                 <p v-if="menulist != editText">{{ menulist.data.nameTh }}</p>
-                                <input size="10" v-else type="text" v-model="menu.nameTh">
+                                    <v-text-field v-else cols="12" sm="6" md="4" variant="underlined" v-model="menu.nameTh"></v-text-field>
                             </td>
                             <td>
                                 <p v-if="menulist != editText">{{ menulist.data.nameEn }}</p>
-                                <input size="10" v-else type="text" v-model="menu.nameEn">
+                                <v-text-field v-else cols="12" sm="6" md="4" variant="underlined" v-model="menu.nameEn"></v-text-field>
+                                
                             </td>
                             <td>
                                 <p v-if="menulist != editText">{{ menulist.data.price }}</p>
-                                <input size="5" v-else type="number" v-model="menu.price">
+                                <input v-else type="number" v-model="menu.price">
                             </td>
                             <td>
                                 <p v-if="menulist != editText">{{ menulist.data.detail }}</p>
-                                <input size="15" v-else type="text" v-model="menu.detail">
+                                <v-text-field v-else cols="12" sm="6" md="4" variant="underlined" v-model="menu.detail"></v-text-field>
                             </td>
                             <td>
                                 <div class="text-center" v-if="menulist != editText">
@@ -249,4 +250,5 @@ function logout() {
 
  .btlogout {
      margin-right: 2rem;
- }</style>
+ }
+</style>
